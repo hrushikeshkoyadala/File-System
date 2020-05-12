@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -23,7 +24,7 @@ user* load_users(FILE *disk, int no_of_users)
 
 user* get_user_by_ID(user *users, int ID)
 {
-    return users +ID;
+    return users + ID;
 }
 
 void add_user(user *users, int no_of_users, char *name_str)
@@ -118,7 +119,7 @@ int main()
             {
                 if (ID != -1 && ID < no_of_users)
                     printf("logging out\n");
-                
+
                 printf("Enter user ID : ");
                 scanf("%d", &ID);
 
@@ -129,7 +130,7 @@ int main()
                 }
                 else
                     printf("Logged in\n");
-                
+
                 break;
             }
 
@@ -171,7 +172,7 @@ int main()
                     printf("no users found\n");
                 else
                     display_messages(disk, users, get_user_by_ID(users, to_display_ID));
-                
+
                 break;
             }
 
@@ -213,7 +214,7 @@ int main()
                     else
                     {
                         user *receiver = get_user_by_ID(users, receiver_ID);
-                        
+
                         if (receiver->no_of_messages >= MESSAGE_SIZE)
                             printf("message limit reached\n");
                         else

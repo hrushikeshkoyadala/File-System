@@ -17,4 +17,5 @@ typedef struct user
 typedef struct message
 {
     char message_str[50];
+    char timestamp[26];
 } message;

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 #include "user.h"
 
 int load_no_of_users(FILE *disk)
@@ -45,10 +46,18 @@ void add_user(user *users, int no_of_users, char *name_str)
     new_user->name[i] = '\0';
 }
 
+char* get_timestamp()
+{
+    time_t curr_time;
+    time(&curr_time);
+    return ctime(&curr_time);
+}
+
 void add_message(FILE *disk, user *sender, char *str, user *receiver)
 {
     str[0] = (char)(sender->ID + 48);
     message new_message;
+    strcpy(new_message.timestamp, get_timestamp());
     strcpy(new_message.message_str, str);
     fseek(disk, receiver->message_offset + (receiver->no_of_messages)*sizeof(message), SEEK_SET);
     fwrite(&new_message, sizeof(message), 1, disk);
@@ -67,8 +76,11 @@ void display_messages(FILE *disk, user *users, user *user)
     message *messages = (message *)malloc(sizeof(message) * user->no_of_messages);
     fread(messages, sizeof(message), user->no_of_messages, disk);
 
-    for (int i = 0; i < user->no_of_messages; i++)
-        printf("\"%s\" - %s\n", messages[i].message_str + 1, users[(int)(messages[i].message_str[0]) - 48].name);
+    for (int i = 0; i < user->no_of_messages; i++)  
+    {
+        printf("\"%s\" - %s", messages[i].message_str + 1, users[(int)(messages[i].message_str[0]) - 48].name);
+        printf(", %s\n", messages[i].timestamp);
+    }
 }
 
 void display_users(user *users, int no_of_users)

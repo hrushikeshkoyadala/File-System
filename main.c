@@ -33,7 +33,7 @@ void add_user(user *users, int no_of_users, char *name_str)
     new_user->ID = no_of_users;
     new_user->no_of_messages = 0;
 
-    new_user->message_offset = sizeof(int) + USER_LIMIT*sizeof(user) + no_of_users*MESSAGE_LIMIT*MESSAGE_SIZE + 1;
+    new_user->message_offset = sizeof(int) + USER_LIMIT*sizeof(user) + no_of_users*MESSAGE_LIMIT*sizeof(message) + 1;
 
     int i = 0;
     while (name_str[i])
@@ -45,11 +45,13 @@ void add_user(user *users, int no_of_users, char *name_str)
     new_user->name[i] = '\0';
 }
 
-void add_message(FILE *disk, user *sender, char *message, user *receiver)
+void add_message(FILE *disk, user *sender, char *str, user *receiver)
 {
-    message[0] = (char)(sender->ID + 48);
-    fseek(disk, receiver->message_offset + (receiver->no_of_messages)*MESSAGE_SIZE, SEEK_SET);
-    fwrite(message, MESSAGE_SIZE, 1, disk);
+    str[0] = (char)(sender->ID + 48);
+    message new_message;
+    strcpy(new_message.message_str, str);
+    fseek(disk, receiver->message_offset + (receiver->no_of_messages)*sizeof(message), SEEK_SET);
+    fwrite(&new_message, sizeof(message), 1, disk);
     receiver->no_of_messages++;
 }
 
@@ -62,13 +64,11 @@ void display_messages(FILE *disk, user *users, user *user)
     }
 
     fseek(disk, user->message_offset, SEEK_SET);
-    char *message = (char *)malloc(50);
+    message *messages = (message *)malloc(sizeof(message) * user->no_of_messages);
+    fread(messages, sizeof(message), user->no_of_messages, disk);
 
     for (int i = 0; i < user->no_of_messages; i++)
-    {
-        fread(message, MESSAGE_SIZE, 1, disk);
-        printf("\"%s\" - %s\n", message + 1, users[(int)message[0] - 48].name);
-    }
+        printf("\"%s\" - %s\n", messages[i].message_str + 1, users[(int)(messages[i].message_str[0]) - 48].name);
 }
 
 void display_users(user *users, int no_of_users)
@@ -188,7 +188,7 @@ int main()
                         printf("message limit reached\n");
                     else
                     {
-                        char message[50];
+                        char message[MESSAGE_SIZE];
                         printf("Enter message : ");
                         scanf("\n%48[^\n]", message + 1);
 
@@ -215,11 +215,11 @@ int main()
                     {
                         user *receiver = get_user_by_ID(users, receiver_ID);
 
-                        if (receiver->no_of_messages >= MESSAGE_SIZE)
+                        if (receiver->no_of_messages >= MESSAGE_LIMIT)
                             printf("message limit reached\n");
                         else
                         {
-                            char message[50];
+                            char message[MESSAGE_SIZE];
                             printf("Enter message : ");
                             scanf("\n%48[^\n]", message + 1);
 

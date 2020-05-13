@@ -13,3 +13,8 @@ typedef struct user
     int message_offset;
     int no_of_messages;
 } user;
+
+typedef struct message
+{
+    char message_str[50];
+} message;

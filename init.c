@@ -3,12 +3,25 @@
 //
 
 #include <stdio.h>
+#include "user.h"
 
 int main()
 {
-    int no_of_users = 0;
     FILE *disk = fopen("disk", "wb");
-    fseek(disk, 0, SEEK_SET);
-    fwrite(&no_of_users, sizeof(int), 1, disk);
+    int write_variable;
+
+    //number of users = 0
+    write_variable = 0;
+    fwrite(&write_variable, sizeof(int), 1, disk);
+
+    //small block free list head pointer
+    write_variable = sizeof(int)*3;
+    fwrite(&write_variable, sizeof(int), 1, disk);
+
+    //big block free list head pointer
+    write_variable = sizeof(int)*3 + SMALL_BLOCK_SIZE;
+    fwrite(&write_variable, sizeof(int), 1, disk);
+
     fclose(disk);
+    return 0;
 }

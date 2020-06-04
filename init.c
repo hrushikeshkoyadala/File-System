@@ -19,7 +19,7 @@ int main()
     fwrite(&write_variable, sizeof(int), 1, disk);
 
     //small block free list head pointer
-    write_variable = 0
+    write_variable = 0;
     fwrite(&write_variable, sizeof(int), 1, disk);
 
     //big block free list head pointer

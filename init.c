@@ -14,12 +14,16 @@ int main()
     write_variable = 0;
     fwrite(&write_variable, sizeof(int), 1, disk);
 
-    //small block free list head pointer
+    //free memory pool starting address
     write_variable = sizeof(int)*3;
     fwrite(&write_variable, sizeof(int), 1, disk);
 
+    //small block free list head pointer
+    write_variable = 0
+    fwrite(&write_variable, sizeof(int), 1, disk);
+
     //big block free list head pointer
-    write_variable = sizeof(int)*3 + SMALL_BLOCK_SIZE;
+    write_variable = 0;
     fwrite(&write_variable, sizeof(int), 1, disk);
 
     fclose(disk);

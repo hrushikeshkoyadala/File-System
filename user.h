@@ -2,9 +2,9 @@
 // Created by Hrushikesh Koyadala on 11/05/20.
 //
 
-#define DISK_SIZE 52613349376
-#define BIG_BLOCK_SIZE 80
-#define SMALL_BLOCK_SIZE 40
+#define DISK_SIZE 10485760
+#define BIG_BLOCK_SIZE 100
+#define SMALL_BLOCK_SIZE 35
 
 typedef struct user
 {
@@ -14,12 +14,9 @@ typedef struct user
     int next_user;
 } user;
 
-typedef struct small_message
+typedef struct message
 {
-    //1 - big ; 0 - smalls
-    char block_size;
-
-    char message_str[20];
-    char timestamp[26];
-    int sender_ID;
-} small_message;
+    char message_str[50];
+    char timestamp[17];
+    char sender_name[20];
+} message;

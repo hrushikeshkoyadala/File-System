@@ -189,8 +189,6 @@ int add_message(FILE *disk, user *receiver, message *msg)
     }
     else
     {
-        msg->ID = 1;
-
         message current_message;
         int current_address = receiver->message_start_offset;
         fseek(disk, current_address, SEEK_SET);
@@ -201,9 +199,9 @@ int add_message(FILE *disk, user *receiver, message *msg)
             current_address = current_message.next_message;
             fseek(disk, current_address, SEEK_SET);
             fread(&current_message, sizeof(message), 1, disk);
-
-            msg->ID++;
         }
+
+        msg->ID = current_message.ID + 1;
 
         current_message.next_message = message_address;
         fseek(disk, current_address, SEEK_SET);
@@ -333,6 +331,7 @@ int delete_user_by_ID(FILE *disk, int remove_ID)
 }
 
 
+
 //Modify for more attributes
 void display_users(FILE *disk)
 {
@@ -396,14 +395,8 @@ message* create_message(char *content, char *sender)
     return new;
 }
 
-int main()
+/*int main()
 {
     FILE *disk = fopen("disk", "rb+");
-    add_user(disk, "batman");
-    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
-    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
-    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
-    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
-    display_messages_by_ID(disk, 0);
     fclose(disk);
-}
+}*/

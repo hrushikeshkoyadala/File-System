@@ -181,6 +181,7 @@ int add_message(FILE *disk, user *receiver, message *msg)
     //receiver has no messages
     if (receiver->message_start_offset == 0)
     { 
+        msg->ID = 0;
         receiver->message_start_offset = message_address;
     
         if (update_user(disk, receiver, get_address_by_ID(disk, receiver->ID)) == 0)
@@ -188,6 +189,8 @@ int add_message(FILE *disk, user *receiver, message *msg)
     }
     else
     {
+        msg->ID = 1;
+
         message current_message;
         int current_address = receiver->message_start_offset;
         fseek(disk, current_address, SEEK_SET);
@@ -198,6 +201,8 @@ int add_message(FILE *disk, user *receiver, message *msg)
             current_address = current_message.next_message;
             fseek(disk, current_address, SEEK_SET);
             fread(&current_message, sizeof(message), 1, disk);
+
+            msg->ID++;
         }
 
         current_message.next_message = message_address;
@@ -363,12 +368,12 @@ void display_messages(FILE *disk, user *to_display)
 
     while (current_message.next_message != 0)
     {
-        printf("%s\n", current_message.message_str);
+        printf("%d %s\n", current_message.ID, current_message.message_str);
         fseek(disk, current_message.next_message, SEEK_SET);
         fread(&current_message, sizeof(message), 1, disk);
     }
 
-    printf("%s\n", current_message.message_str);
+    printf("%d %s\n", current_message.ID, current_message.message_str);
 }
 
 void display_messages_by_ID(FILE *disk, int display_ID)
@@ -391,8 +396,14 @@ message* create_message(char *content, char *sender)
     return new;
 }
 
-/*int main()
+int main()
 {
     FILE *disk = fopen("disk", "rb+");
+    add_user(disk, "batman");
+    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
+    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
+    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
+    add_message(disk, get_user_by_ID(disk, 0), create_message("Aeg", "axcv"));
+    display_messages_by_ID(disk, 0);
     fclose(disk);
-}*/
+}

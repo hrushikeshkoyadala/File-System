@@ -105,6 +105,19 @@ void free_sblock(FILE *disk, int block_address)
     fwrite(&block_address, sizeof(int), 1, disk);
 }
 
+void free_bblock(FILE *disk, int block_address)
+{
+    int block_list_head;
+    fseek(disk, sizeof(int) * 3, SEEK_SET);
+    fread(&block_list_head, sizeof(int), 1, disk);
+
+    fseek(disk, block_address, SEEK_SET);
+    fwrite(&block_list_head, sizeof(int), 1, disk);
+
+    fseek(disk, sizeof(int) * 3, SEEK_SET);
+    fwrite(&block_address, sizeof(int), 1, disk);
+}
+
 /*
     returns user address by ID
     returns -1 if user does not exist
@@ -161,6 +174,21 @@ int update_user(FILE *disk, user *to_update, int user_address)
 
     fseek(disk, user_address, SEEK_SET);
     fwrite(to_update, sizeof(user), 1, disk);
+
+    return 1;
+}
+
+/*
+    returns 1 on success
+    returns 0 on failure
+*/
+int update_message(FILE *disk, message *to_update, int message_address)
+{
+    if (message_address == 0)
+        return 0;
+    
+    fseek(disk, message_address, SEEK_SET);
+    fwrite(to_update, sizeof(message), 1, disk);
 
     return 1;
 }
@@ -330,7 +358,56 @@ int delete_user_by_ID(FILE *disk, int remove_ID)
     return 0;
 }
 
+/*
+    returns 1 on success
+    returns 0 in failure
+*/
+int delete_message_by_ID(FILE *disk, user *current_user, int remove_ID)
+{
+    if (current_user == NULL || current_user->message_start_offset == 0)
+        return 0;
 
+    message current_message;
+    fseek(disk, current_user->message_start_offset, SEEK_SET);
+    fread(&current_message, sizeof(message), 1, disk);
+
+    if (current_message.ID == remove_ID)
+    {
+        int to_remove_block = current_user->message_start_offset;
+        current_user->message_start_offset = current_message.next_message;
+        free_bblock(disk, to_remove_block);
+
+        update_user(disk, current_user, get_address_by_ID(disk, current_user->ID));
+        return 1;
+    }
+
+    message next;
+    int current_address = current_user->message_start_offset;
+
+    while (current_message.next_message != 0)
+    {
+        fseek(disk, current_message.next_message, SEEK_SET);
+        fread(&next, sizeof(message), 1, disk);
+
+        if (next.ID == remove_ID)
+        {
+            int to_remove_block = current_message.next_message;
+            current_message.next_message = next.next_message;
+
+            update_message(disk, &current_message, current_address);
+            free_bblock(disk, to_remove_block);
+
+            return 1;
+        }
+        else
+        {
+            current_address = current_message.next_message;
+            current_message = next;
+        }
+    }
+
+    return 0;
+}
 
 //Modify for more attributes
 void display_users(FILE *disk)

@@ -18,7 +18,7 @@ typedef struct message
 {
     int ID;
     char message_str[80];
-    //char timestamp[17];
+    char timestamp[17];
     char sender_name[20];
     int next_message;
 } message;

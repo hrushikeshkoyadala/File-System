@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "user.h"
 
 /*
@@ -444,12 +445,12 @@ void display_messages(FILE *disk, user *to_display)
 
     while (current_message.next_message != 0)
     {
-        printf("%d %s\n", current_message.ID, current_message.message_str);
+        printf("%d %s %s\n", current_message.ID, current_message.message_str, current_message.timestamp);
         fseek(disk, current_message.next_message, SEEK_SET);
         fread(&current_message, sizeof(message), 1, disk);
     }
 
-    printf("%d %s\n", current_message.ID, current_message.message_str);
+    printf("%d %s %s\n", current_message.ID, current_message.message_str, current_message.timestamp);
 }
 
 void display_messages_by_ID(FILE *disk, int display_ID)
@@ -462,18 +463,39 @@ void display_messages_by_ID(FILE *disk, int display_ID)
     display_messages(disk, to_display);
 }
 
+char* get_timestamp()
+{
+    time_t curr_time;
+    time(&curr_time);
+
+    char *timestamp = (char *)malloc(sizeof(char) * 24);
+    strcpy(timestamp, ctime(&curr_time));
+
+    //trimming the timestamp
+    timestamp[16] = '\0';
+
+    return timestamp;
+}
+
 message* create_message(char *content, char *sender)
 {
     message *new = (message *)malloc(sizeof(message));
 
     strcpy(new->message_str, content);
     strcpy(new->sender_name, sender);
-
+    strcpy(new->timestamp, get_timestamp());
     return new;
 }
 
 /*int main()
 {
     FILE *disk = fopen("disk", "rb+");
+    add_user(disk, "Batman");
+
+    add_message(disk, get_user_by_ID(disk, 0), create_message("czxb", "tu"));
+    add_message(disk, get_user_by_ID(disk, 0), create_message("czxb", "tu"));
+    add_message(disk, get_user_by_ID(disk, 0), create_message("czxb", "tu"));
+
+    display_messages_by_ID(disk, 0);
     fclose(disk);
 }*/

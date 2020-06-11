@@ -92,48 +92,78 @@ int balloc(FILE *disk)
     return memory_probe;
 }
 
-user get_user_by_ID(FILE *disk, int required_ID)
+void free_sblock(FILE *disk, int block_address)
 {
-    int user_head;
-    fseek(disk, sizeof(int) * 4, SEEK_SET);
-    fread(&user_head, sizeof(int), 1, disk);
+    int block_list_head;
+    fseek(disk, sizeof(int) * 2, SEEK_SET);
+    fread(&block_list_head, sizeof(int), 1, disk);
 
-    fseek(disk, user_head, SEEK_SET);
+    fseek(disk, block_address, SEEK_SET);
+    fwrite(&block_list_head, sizeof(int), 1, disk);
 
-    user current_user;
-    fread(&current_user, sizeof(user), 1, disk);
-
-    while (current_user.ID != required_ID)
-    {
-        fseek(disk, current_user.next_user, SEEK_SET);
-        fread(&current_user, sizeof(user), 1, disk);
-    }
-
-    return current_user;
+    fseek(disk, sizeof(int) * 2, SEEK_SET);
+    fwrite(&block_address, sizeof(int), 1, disk);
 }
 
-void update_user(FILE *disk, user *to_update)
+/*
+    returns user address by ID
+    returns -1 if user does not exist
+*/
+int get_address_by_ID(FILE *disk, int required_ID)
 {
     int current_address;
     fseek(disk, sizeof(int) * 4, SEEK_SET);
     fread(&current_address, sizeof(int), 1, disk);
 
-    user current_user;
+    if (current_address == 0)
+        return -1;
     
+    user current_user;
     fseek(disk, current_address, SEEK_SET);
     fread(&current_user, sizeof(user), 1, disk);
 
-    while (current_user.ID != to_update->ID)
+    while (current_user.ID != required_ID)
     {
         current_address = current_user.next_user;
+
+        if (current_address == 0)
+            return -1;
+        
         fseek(disk, current_address, SEEK_SET);
         fread(&current_user, sizeof(user), 1, disk);
     }
 
-    fseek(disk, current_address, SEEK_SET);
-    fwrite(to_update, sizeof(user), 1, disk);
+    return current_address;
 }
 
+user* get_user_by_ID(FILE *disk, int required_ID)
+{
+    int user_address = get_address_by_ID(disk, required_ID);
+
+    if (user_address == -1)
+        return NULL;
+    
+    user *to_return = (user *)malloc(sizeof(user));
+    fseek(disk, user_address, SEEK_SET);
+    fread(to_return, sizeof(user), 1, disk);
+
+    return to_return;
+}
+
+/*
+    returns 1 on success
+    returns 0 on failure
+*/
+int update_user(FILE *disk, user *to_update, int user_address)
+{
+    if (user_address == 0)
+        return 0;
+
+    fseek(disk, user_address, SEEK_SET);
+    fwrite(to_update, sizeof(user), 1, disk);
+
+    return 1;
+}
 
 /*
     returns 1 on success
@@ -143,7 +173,7 @@ int add_message(FILE *disk, user *receiver, message *msg)
 {
     int message_address = balloc(disk);
 
-    if (message_address == 0)
+    if (receiver == NULL || msg == NULL || message_address == 0)
         return 0;
 
     msg->next_message = 0;
@@ -152,7 +182,9 @@ int add_message(FILE *disk, user *receiver, message *msg)
     if (receiver->message_start_offset == 0)
     { 
         receiver->message_start_offset = message_address;
-        update_user(disk, receiver);
+    
+        if (update_user(disk, receiver, get_address_by_ID(disk, receiver->ID)) == 0)
+            return 0;
     }
     else
     {
@@ -181,6 +213,7 @@ int add_message(FILE *disk, user *receiver, message *msg)
 
     return 1;
 }
+
 /*
     returns user ID on success
     returns -1 on failure
@@ -236,19 +269,6 @@ int add_user(FILE *disk, char *name_str)
     return new_user.ID;
 }
 
-void free_sblock(FILE *disk, int block_address)
-{
-    int block_list_head;
-    fseek(disk, sizeof(int) * 2, SEEK_SET);
-    fread(&block_list_head, sizeof(int), 1, disk);
-
-    fseek(disk, block_address, SEEK_SET);
-    fwrite(&block_list_head, sizeof(int), 1, disk);
-
-    fseek(disk, sizeof(int) * 2, SEEK_SET);
-    fwrite(&block_address, sizeof(int), 1, disk);
-}
-
 /*
     returns 1 on success
     returns 0 on failure
@@ -289,8 +309,12 @@ int delete_user_by_ID(FILE *disk, int remove_ID)
             //clear_messages();
             int to_remove_block = current_user.next_user;
             current_user.next_user = next.next_user;
-            update_user(disk, &current_user);
+            
+            if (update_user(disk, &current_user, get_address_by_ID(disk, current_user.ID)) == 0)
+                return 0;
+
             free_sblock(disk, to_remove_block);
+
             return 1;
         }
         else
@@ -303,12 +327,13 @@ int delete_user_by_ID(FILE *disk, int remove_ID)
     return 0;
 }
 
+
+//Modify for more attributes
 void display_users(FILE *disk)
 {
     int head_address;
     fseek(disk, sizeof(int) * 4, SEEK_SET);
     fread(&head_address, sizeof(int), 1, disk);
-    printf("%d\n", head_address);
 
     if (head_address == 0)
         return;
@@ -327,13 +352,13 @@ void display_users(FILE *disk)
     printf("%s %d\n", u.name, u.ID);
 }
 
-void display_messages(FILE *disk, user to_display)
+void display_messages(FILE *disk, user *to_display)
 {
-    if (to_display.message_start_offset == 0)
+    if (to_display == NULL || to_display->message_start_offset == 0)
         return;
 
     message current_message;
-    fseek(disk, to_display.message_start_offset, SEEK_SET);
+    fseek(disk, to_display->message_start_offset, SEEK_SET);
     fread(&current_message, sizeof(message), 1, disk);
 
     while (current_message.next_message != 0)
@@ -346,68 +371,28 @@ void display_messages(FILE *disk, user to_display)
     printf("%s\n", current_message.message_str);
 }
 
-message create_message(char *message_str, char *sender_name)
+void display_messages_by_ID(FILE *disk, int display_ID)
 {
-    message to_return;
-    strcpy(to_return.message_str, message_str);
-    strcpy(to_return.sender_name, sender_name);
-    to_return.next_message = 0;
+    user *to_display = get_user_by_ID(disk, display_ID);
 
-    return to_return;
+    if (to_display == NULL)
+        return;
+
+    display_messages(disk, to_display);
 }
 
-/*
-    returns 1 on success
-    returns 0 on failure
-*/
-int add_user_from_file(FILE *disk, char *user_name, FILE *messages)
+message* create_message(char *content, char *sender)
 {
-    int user_ID = add_user(disk, user_name);
+    message *new = (message *)malloc(sizeof(message));
 
-    if (user_ID == -1)
-        return 0;
-    
-    user user_struct = get_user_by_ID(disk, user_ID);
+    strcpy(new->message_str, content);
+    strcpy(new->sender_name, sender);
 
-    char str[55];
-    message curr_message;
-    while (fscanf(messages, "%[^\n]\n", str) >= 1)
-    {
-        curr_message = create_message(str, "Anonymous");
-
-        if (add_message(disk, &user_struct, &curr_message) == 0)
-            break;
-    }
-
-    return 1;
+    return new;
 }
 
-int main()
+/*int main()
 {
     FILE *disk = fopen("disk", "rb+");
-    char user_names[][20] = {"Batman", "Superman", "Wonder Woman", "Flash", "Cyborg", "Green Lantern", "Martian manhunter", "Constantine"};
-    char message_files[][100] = {"/Users/hrushi/CLionProjects/File System/test_data/batman_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/superman_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/ww_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/flash_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/cyborg_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/green_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/martian_messages.txt", "/Users/hrushi/CLionProjects/File System/test_data/constantine_messages.txt"};
-    FILE *message_file;
-
-    for (int i = 0; i < 3; i++)
-    {
-        message_file = fopen(message_files[i], "r");
-        if (message_file != NULL) {
-            if (add_user_from_file(disk, user_names[i], message_file) == 0)
-                break;
-        } else
-        {
-            printf("Aegg");
-            break;
-        }
-        fclose(message_file);
-    }
-    display_users(disk);
-    for (int i = 0; i < 3; i++)
-    {
-        display_messages(disk, get_user_by_ID(disk, i));
-        printf("\n\n**************************************************************\n\n");
-    }
     fclose(disk);
-    return 0;
-}
+}*/
